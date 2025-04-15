@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using SampleApiReact.DTOS;
 using SampleApiReact.Model;
 using SampleApiReact.Services;
 
@@ -11,13 +13,14 @@ namespace SampleApiReact.Controllers
     {
         private readonly IProductService _service;
         private readonly ILogger<ProductsController> _logger;
+        private readonly IMapper _mapper;
 
-        public ProductsController(IProductService service, ILogger<ProductsController> logger)
+        public ProductsController(IProductService service, ILogger<ProductsController> logger, IMapper mapper)
         {
             _service = service;
             _logger = logger;
+            _mapper = mapper;
         }
-
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -50,19 +53,27 @@ namespace SampleApiReact.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Add(Product product)
+        public async Task<IActionResult> Add(CreateProductDto dto)
         {
             try
             {
+                var product = _mapper.Map<Product>(dto);
                 var created = await _service.AddAsync(product);
-                return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+                var createdDto = _mapper.Map<ProductDto>(created);
+
+                return CreatedAtAction(nameof(GetById), new { id = createdDto.Id }, new
+                {
+                    message = "Product created successfully",
+                    data = createdDto
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error creating product");
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, new { message = "Internal server error" });
             }
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, Product product)
